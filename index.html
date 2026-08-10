@@ -212,8 +212,7 @@
 
     <div class="tabs">
         <button class="tab active" data-tab="records">Betankungen</button>
-        <button class="tab" data-tab="overview">Gesamtübersicht</button>
-        <button class="tab" data-tab="consumption">Verbrauch</button>
+        <button class="tab" data-tab="overview">Übersicht</button>
         <button class="tab" data-tab="tankStations">Tankstellen</button>
         <button class="tab" data-tab="backup">Backup</button>
     </div>
@@ -268,25 +267,43 @@
         </div>
     </div>
 
-    <!-- Gesamtübersicht -->
+    <!-- Übersicht (Gesamtstatistik + Verbrauch zusammengeführt) -->
     <div class="tab-content" id="overview">
         <div class="card">
             <h2>Gesamtstatistik aller Betankungen</h2>
-            
+
             <div class="filter-section">
                 <h3>📅 Zeitraum auswählen</h3>
                 <div class="filter-group">
                     <label>
-                        <select id="timePeriod" name="timePeriod">
-                            <option value="all" selected>Alle Daten</option>
-                            <option value="lastMonth">Letzter Monat</option>
-                            <option value="lastHalfYear">Letztes Halbjahr</option>
-                            <option value="lastYear">Letztes Jahr</option>
+                        <select id="periodType" name="periodType">
+                            <option value="all" selected>Gesamter Zeitraum</option>
+                            <option value="year">Bestimmtes Jahr</option>
+                            <option value="month">Bestimmter Monat</option>
+                        </select>
+                    </label>
+                    <label id="periodYearWrap" style="display:none;">
+                        <select id="periodYear" name="periodYear"></select>
+                    </label>
+                    <label id="periodMonthWrap" style="display:none;">
+                        <select id="periodMonth" name="periodMonth">
+                            <option value="1">Januar</option>
+                            <option value="2">Februar</option>
+                            <option value="3">März</option>
+                            <option value="4">April</option>
+                            <option value="5">Mai</option>
+                            <option value="6">Juni</option>
+                            <option value="7">Juli</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">Oktober</option>
+                            <option value="11">November</option>
+                            <option value="12">Dezember</option>
                         </select>
                     </label>
                 </div>
             </div>
-            
+
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="totalRecords">0</div>
@@ -306,48 +323,16 @@
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- Verbrauch -->
-    <div class="tab-content" id="consumption">
         <div class="card">
             <h2>Verbrauchsstatistiken</h2>
-            
-            <div class="filter-section">
-                <h3>📅 Zeitraum auswählen</h3>
-                <div class="filter-group">
-                    <label>
-                        <select id="consumptionTimePeriod" name="consumptionTimePeriod">
-                            <option value="all" selected>Alle Daten</option>
-                            <!-- Aktuelles Jahr - Monate -->
-                            <option value="thisYear">Dieses Jahr (2026)</option>
-                            <option value="2026-01">Januar 2026</option>
-                            <option value="2026-02">Februar 2026</option>
-                            <option value="2026-03">März 2026</option>
-                            <option value="2026-04">April 2026</option>
-                            <option value="2026-05">Mai 2026</option>
-                            <option value="2026-06">Juni 2026</option>
-                            <option value="2026-07">Juli 2026</option>
-                            <option value="2026-08">August 2026</option>
-                            <option value="2026-09">September 2026</option>
-                            <option value="2026-10">Oktober 2026</option>
-                            <option value="2026-11">November 2026</option>
-                            <option value="2026-12">Dezember 2026</option>
-                            <!-- Standard-Zeiträume -->
-                            <option value="lastMonth">Letzter Monat</option>
-                            <option value="lastHalfYear">Letztes Halbjahr</option>
-                            <option value="lastYear">Letztes Jahr</option>
-                        </select>
-                    </label>
-                </div>
-            </div>
-            
+
             <!-- Diagramm -->
             <div class="chart-container">
                 <h3 class="chart-title">📊 Verbrauch nach Kategorie</h3>
                 <canvas id="consumptionChart" width="400" height="200"></canvas>
             </div>
-            
+
             <h3>📊 Statistiken nach Kategorie</h3>
             <div class="stats-grid" id="categoryStats">
                 <div class="stat-card">
@@ -375,7 +360,7 @@
                     <div class="stat-label">Gesamtstunden (Traktor)</div>
                 </div>
             </div>
-            
+
             <h3 style="margin-top: 20px;">📊 Statistiken nach Tankstelle</h3>
             <div class="stats-grid" id="tankStationStats">
                 <div class="empty-state">Keine Daten für den ausgewählten Zeitraum.</div>
@@ -560,8 +545,11 @@
         const backupBtn = document.getElementById('backupBtn');
         const restoreBtn = document.getElementById('restoreBtn');
         const fileInput = document.getElementById('fileInput');
-        const timePeriodSelect = document.getElementById('timePeriod');
-        const consumptionTimePeriodSelect = document.getElementById('consumptionTimePeriod');
+        const periodTypeSelect = document.getElementById('periodType');
+        const periodYearSelect = document.getElementById('periodYear');
+        const periodMonthSelect = document.getElementById('periodMonth');
+        const periodYearWrap = document.getElementById('periodYearWrap');
+        const periodMonthWrap = document.getElementById('periodMonthWrap');
         const chartCanvas = document.getElementById('consumptionChart');
 
         // --- Initialisierung ---
@@ -575,9 +563,7 @@
                     document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
                     
                     if (tab.getAttribute('data-tab') === 'overview') {
-                        updateStats();
-                    } else if (tab.getAttribute('data-tab') === 'consumption') {
-                        updateConsumptionStats();
+                        updateOverview();
                     }
                 });
             });
@@ -647,8 +633,7 @@
                                 localStorage.setItem('tankStations', JSON.stringify(tankStations));
                                 loadRecords();
                                 loadTankStations();
-                                updateStats();
-                                updateConsumptionStats();
+                                updateOverview();
                             }
                         } catch (err) { 
                             alert('Fehler beim Wiederherstellen: ' + err.message); 
@@ -659,54 +644,66 @@
             });
 
             // Filter-Änderungen
-            timePeriodSelect.addEventListener('change', updateStats);
-            consumptionTimePeriodSelect.addEventListener('change', updateConsumptionStats);
+            periodTypeSelect.addEventListener('change', () => {
+                const type = periodTypeSelect.value;
+                periodYearWrap.style.display = (type === 'year' || type === 'month') ? 'block' : 'none';
+                periodMonthWrap.style.display = (type === 'month') ? 'block' : 'none';
+                updateOverview();
+            });
+            periodYearSelect.addEventListener('change', updateOverview);
+            periodMonthSelect.addEventListener('change', updateOverview);
 
             // Initial laden
             loadTankStations();
             loadRecords();
+            populatePeriodYears();
             document.getElementById('date').valueAsDate = new Date();
             categorySelect.value = 'pkd';
             categorySelect.dispatchEvent(new Event('change'));
         }
 
-        // --- Hilfsfunktion: Filtere Records nach Zeitraum ---
-        function filterRecordsByPeriod(period) {
-            const now = new Date();
-            let startDate = new Date(0);
-            let endDate = new Date();
-            
-            if (period === 'all') {
-                // Alle Daten
-                return records;
-            } else if (period === 'thisYear') {
-                // Dieses Jahr
-                startDate = new Date(now.getFullYear(), 0, 1);
-                endDate = new Date(now.getFullYear(), 11, 31);
-            } else if (period.startsWith('2026-')) {
-                // Einzelner Monat
-                const month = parseInt(period.split('-')[1]) - 1;
-                startDate = new Date(2026, month, 1);
-                endDate = new Date(2026, month + 1, 0);
-            } else {
-                // Standard-Zeiträume
-                switch(period) {
-                    case 'lastMonth':
-                        startDate = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
-                        break;
-                    case 'lastHalfYear':
-                        startDate = new Date(now.getFullYear(), now.getMonth() - 6, now.getDate());
-                        break;
-                    case 'lastYear':
-                        startDate = new Date(now.getFullYear() - 1, now.getMonth(), now.getDate());
-                        break;
-                }
-            }
-            
-            return records.filter(record => {
-                const recordDate = new Date(record.date);
-                return recordDate >= startDate && recordDate <= endDate;
+        // --- Verfügbare Jahre aus den Betankungen ermitteln und Dropdown befüllen ---
+        function populatePeriodYears() {
+            const currentYear = new Date().getFullYear();
+            const yearsFromRecords = records.map(r => new Date(r.date).getFullYear());
+            const years = Array.from(new Set([currentYear, ...yearsFromRecords])).sort((a, b) => b - a);
+
+            const previousValue = periodYearSelect.value;
+            periodYearSelect.innerHTML = '';
+            years.forEach(year => {
+                const option = document.createElement('option');
+                option.value = year;
+                option.textContent = year;
+                periodYearSelect.appendChild(option);
             });
+            if (previousValue && years.includes(parseInt(previousValue))) {
+                periodYearSelect.value = previousValue;
+            }
+        }
+
+        // --- Hilfsfunktion: Filtere Records nach gewähltem Zeitraum (Gesamt / Jahr / Monat) ---
+        function getFilteredRecords() {
+            const type = periodTypeSelect.value;
+
+            if (type === 'all') {
+                return records;
+            }
+
+            const year = parseInt(periodYearSelect.value);
+
+            if (type === 'year') {
+                return records.filter(r => new Date(r.date).getFullYear() === year);
+            }
+
+            if (type === 'month') {
+                const month = parseInt(periodMonthSelect.value); // 1-12
+                return records.filter(r => {
+                    const d = new Date(r.date);
+                    return d.getFullYear() === year && (d.getMonth() + 1) === month;
+                });
+            }
+
+            return records;
         }
 
         // --- Betankung hinzufügen ---
@@ -738,8 +735,7 @@
 
             localStorage.setItem('tankRecords', JSON.stringify(records));
             loadRecords();
-            updateStats();
-            updateConsumptionStats();
+            updateOverview();
             recordForm.reset();
             document.getElementById('date').valueAsDate = new Date();
         }
@@ -750,8 +746,7 @@
                 records.splice(id, 1);
                 localStorage.setItem('tankRecords', JSON.stringify(records));
                 loadRecords();
-                updateStats();
-                updateConsumptionStats();
+                updateOverview();
             }
         }
 
@@ -816,11 +811,12 @@
             });
         }
 
-        // --- Statistiken aktualisieren (mit Zeitraumfilter) ---
-        function updateStats() {
-            const period = timePeriodSelect.value;
-            const filteredRecords = filterRecordsByPeriod(period);
-            
+        // --- Übersicht aktualisieren: Gesamtstatistik + Verbrauchsstatistik (gemeinsamer Zeitraumfilter) ---
+        function updateOverview() {
+            populatePeriodYears();
+            const filteredRecords = getFilteredRecords();
+
+            // Gesamtstatistik (Gesamtsumme erscheint ausschließlich hier, im Übersicht-Tab)
             const totalRecords = filteredRecords.length;
             const totalCost = filteredRecords.reduce((sum, r) => sum + r.totalPrice, 0);
             const totalLiters = filteredRecords.reduce((sum, r) => sum + r.liters, 0);
@@ -830,13 +826,12 @@
             document.getElementById('totalCost').textContent = `${totalCost.toFixed(2)} €`;
             document.getElementById('totalLiters').textContent = `${totalLiters.toFixed(2)} L`;
             document.getElementById('avgPrice').textContent = `${avgPrice.toFixed(2)} €/L`;
+
+            updateConsumptionStats(filteredRecords);
         }
 
-        // --- Verbrauchsstatistiken aktualisieren (mit Zeitraumfilter) ---
-        function updateConsumptionStats() {
-            const period = consumptionTimePeriodSelect.value;
-            const filteredRecords = filterRecordsByPeriod(period);
-            
+        // --- Verbrauchsstatistiken aktualisieren (nutzt denselben gefilterten Datensatz) ---
+        function updateConsumptionStats(filteredRecords) {
             // Statistiken für jede Kategorie einzeln berechnen
             const categories = ['pkd', 'traktor', 'benzin', 'gemisch'];
             const categoryLabels = {
