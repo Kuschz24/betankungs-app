@@ -1,4 +1,4 @@
-const CACHE_NAME = 'betankungs-app-v16';
+const CACHE_NAME = 'betankungs-app-v17';
 const urlsToCache = [
   './',
   './index.html',
